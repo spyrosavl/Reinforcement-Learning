@@ -107,7 +107,7 @@ def q_learning(env, policy, Q, num_episodes, discount_factor=1.0, alpha=0.5):
         while True:
             next_state, reward, done, _ = env.step(action)
             next_action = policy.sample_action(next_state)
-            Q[state, action] += alpha * (reward + discount_factor * Q[next_state, next_action] - Q[state, action])
+            Q[state, action] += alpha * (reward + discount_factor * np.max(Q[next_state]) - Q[state, action])
             state = next_state
             action = next_action
             R += reward
