@@ -92,14 +92,14 @@ def sample_episode():
         ep_reward += reward
         if done:
             break
-    return ep_reward
+    return t, ep_reward
 
 def main():
     running_reward = 10
     for i_episode in count(1):
         state, ep_reward = env.reset(), 0
         #sample an episode
-        ep_reward = sample_episode()
+        last_episode_final_step, ep_reward = sample_episode()
         # running reward across episodes
         running_reward = 0.05 * ep_reward + (1 - 0.05) * running_reward
         # update policy
@@ -109,7 +109,7 @@ def main():
                   i_episode, ep_reward, running_reward))
         if running_reward > env.spec.reward_threshold:
             print("Solved! Running reward is now {} and "
-                  "the last episode runs to {} time steps!".format(running_reward, t))
+                  "the last episode runs to {} time steps!".format(running_reward, last_episode_final_step))
             break
 
 
