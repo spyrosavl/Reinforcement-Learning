@@ -1,9 +1,11 @@
 #Algorithm from https://github.com/pytorch/examples/blob/master/reinforcement_learning/reinforce.py
-
+#REINFORCE is a gradient-based algorithm that uses Monte Carlo sampling to approximate the gradient of the policy.
+#REINFORCE explained: https://towardsdatascience.com/policy-gradient-methods-104c783251e0
 import argparse
 import gym
 import numpy as np
 from itertools import count
+import random
 
 import torch
 import torch.nn as nn
@@ -27,6 +29,7 @@ args = parser.parse_args()
 env = gym.make('CartPole-v1')
 env.seed(args.seed)
 torch.manual_seed(args.seed)
+random.seed(args.seed)
 
 
 class Policy(nn.Module):
@@ -46,7 +49,6 @@ class Policy(nn.Module):
         action_scores = self.affine2(x)
         return F.softmax(action_scores, dim=1)
 
-
 policy = Policy()
 optimizer = optim.Adam(policy.parameters(), lr=1e-2)
 eps = np.finfo(np.float32).eps.item()
@@ -55,47 +57,53 @@ eps = np.finfo(np.float32).eps.item()
 def select_action(state):
     state = torch.from_numpy(state).float().unsqueeze(0)
     probs = policy(state)
-    m = Categorical(probs)
-    action = m.sample()
-    policy.saved_log_probs.append(m.log_prob(action))
+    actions_distribution = Categorical(probs)
+    action = actions_distribution.sample()
+    policy.saved_log_probs.append(actions_distribution.log_prob(action))
     return action.item()
 
 
-def finish_episode():
+def update_policy():
     R = 0
-    policy_loss = []
-    returns = []
-    for r in policy.rewards[::-1]:
-        R = r + args.gamma * R
-        returns.insert(0, R)
-    returns = torch.tensor(returns)
-    returns = (returns - returns.mean()) / (returns.std() + eps)
-    for log_prob, R in zip(policy.saved_log_probs, returns):
-        policy_loss.append(-log_prob * R)
-    optimizer.zero_grad()
-    policy_loss = torch.cat(policy_loss).sum()
-    policy_loss.backward()
-    optimizer.step()
-    del policy.rewards[:]
-    del policy.saved_log_probs[:]
+    policy_loss_list = [] 
+    future_returns = []
+    for r in policy.rewards[::-1]: # reverse buffer r
+        R = r + args.gamma * R # G_t = r_t + gamma*G_{t+1}
+        future_returns.insert(0, R) # insert at the beginning
+    future_returns = torch.tensor(future_returns)
+    future_returns = (future_returns - future_returns.mean()) / (future_returns.std() + eps) # normalize returns
+    for log_prob, Gt in zip(policy.saved_log_probs, future_returns): # Use trajectory to estimate the policy loss
+        policy_loss_list.append(-log_prob * Gt) # policy loss is the negative log probability of the action times the discounted return
+    optimizer.zero_grad() # clear gradients
+    policy_loss = torch.cat(policy_loss_list).sum() # sum up gradients
+    policy_loss.backward() # backpropagate
+    optimizer.step() # update policy
+    del policy.rewards[:] # clear rewards
+    del policy.saved_log_probs[:] # clear log_probs
 
+def sample_episode():
+    state, ep_reward = env.reset(), 0
+    for t in range(1, 10000): # Don't infinite loop while learning
+        action = select_action(state)
+        state, reward, done, _ = env.step(action)
+        if args.render:
+            env.render()
+        policy.rewards.append(reward)
+        ep_reward += reward
+        if done:
+            break
+    return ep_reward
 
 def main():
     running_reward = 10
     for i_episode in count(1):
         state, ep_reward = env.reset(), 0
-        for t in range(1, 10000):  # Don't infinite loop while learning
-            action = select_action(state)
-            state, reward, done, _ = env.step(action)
-            if args.render:
-                env.render()
-            policy.rewards.append(reward)
-            ep_reward += reward
-            if done:
-                break
-
+        #sample an episode
+        ep_reward = sample_episode()
+        # running reward across episodes
         running_reward = 0.05 * ep_reward + (1 - 0.05) * running_reward
-        finish_episode()
+        # update policy
+        update_policy()
         if i_episode % args.log_interval == 0:
             print('Episode {}\tLast reward: {:.2f}\tAverage reward: {:.2f}'.format(
                   i_episode, ep_reward, running_reward))
