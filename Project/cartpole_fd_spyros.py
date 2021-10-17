@@ -4,7 +4,7 @@
 import argparse
 import gym
 import numpy as np
-from itertools import count
+from itertools import count, permutations
 import random
 import copy
 
@@ -48,23 +48,28 @@ def calculate_policy_loss(policy):
         policy_loss_list.append(-log_prob * Gt) # policy loss is the negative log probability of the action times the discounted return
     return torch.cat(policy_loss_list).sum() # sum up gradients
 
-def update_policy(env, policy, optimizer):
+def fd_for_one_parameter(env, policy, dim1, dim2):
+    eps = np.finfo(np.float32).eps.item()
+    perdubations = [eps, -eps]
+    policy_losses = []
     with torch.no_grad():
-        eps = np.finfo(np.float32).eps.item()
-        plus_minus_e = eps * torch.ones(4) # 4 is the dim of the obs space
-        policy_theta_plus = Policy()
-        policy_theta_plus.linear1.weight.data = policy.linear1.weight.data + plus_minus_e
-        sample_episode(env, policy_theta_plus)
-        policy_theta_minus = Policy()
-        policy_theta_minus.linear1.weight.data = policy.linear1.weight.data - plus_minus_e
-        sample_episode(env, policy_theta_minus)
-        policy_loss_plus = calculate_policy_loss(policy_theta_plus)
-        policy_loss_minus = calculate_policy_loss(policy_theta_minus)
-        policy_loss_gradient = (policy_loss_plus - policy_loss_minus) / (2 * eps)
-        policy_theta = policy.linear1.weight.data - 1e-2 * policy_loss_gradient
-        policy.linear1.weight.data = policy_theta
-    del policy.rewards[:] # clear rewards
-    del policy.saved_log_probs[:] # clear log_probs
+        for perdubation in perdubations:
+            perdubated_policy = Policy() # create a new policy
+            perdubated_policy.linear1.weight.data[dim1][dim2] = policy.linear1.weight.data[dim1][dim2] + perdubation
+            sample_episode(env, perdubated_policy)
+            policy_loss = calculate_policy_loss(perdubated_policy)
+            policy_losses.append(policy_loss)
+        policy_loss_gradient = torch.tensor(policy_losses).sum() / torch.tensor([abs(perdubation) for perdubation in perdubations]).sum()
+    return policy_loss_gradient
+
+def update_policy(env, policy, _):
+    for dim1 in range(policy.linear1.weight.data.shape[0]):
+        for dim2 in range(policy.linear1.weight.data.shape[1]):
+            policy_loss_gradient = fd_for_one_parameter(env, policy, dim1, dim2)
+            policy.linear1.weight.data[dim1][dim2] += - 1e-2 * policy_loss_gradient
+    #clear rewards
+    del policy.rewards[:]
+    del policy.saved_log_probs[:]
 
 def sample_episode(env, policy):
     state, ep_reward = env.reset(), 0
