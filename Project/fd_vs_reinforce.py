@@ -13,6 +13,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from torch.distributions import Categorical
+import matplotlib.pyplot as plt
 
 class Policy(nn.Module):
     def __init__(self):
@@ -48,9 +49,10 @@ def calculate_policy_loss(policy):
         policy_loss_list.append(-log_prob * Gt) # policy loss is the negative log probability of the action times the discounted return
     return torch.cat(policy_loss_list).sum() # sum up gradients
 
-def fd_for_one_parameter(env, policy, dim1, dim2):
-    eps = np.finfo(np.float32).eps.item()
-    perdubations = [eps, -eps]
+def fd_for_one_parameter(env, policy, dim1, dim2, no_of_pertubations=2, epsilon=np.finfo(np.float32).eps.item(), gamma=0.9):
+    epsilon = epsilon * gamma
+    #sample perturbations uniformly from [-epsilon, epsilon]
+    perdubations = (torch.rand(no_of_pertubations) * 2 * epsilon - epsilon).tolist()
     policy_losses = []
     with torch.no_grad():
         for perdubation in perdubations:
@@ -62,10 +64,18 @@ def fd_for_one_parameter(env, policy, dim1, dim2):
         policy_loss_gradient = torch.tensor(policy_losses).sum() / torch.tensor([abs(perdubation) for perdubation in perdubations]).sum()
     return policy_loss_gradient
 
-def update_policy(env, policy, _):
+def update_policy_reinforce(env, policy, optimizer):
+    policy_loss = calculate_policy_loss(policy)
+    optimizer.zero_grad() # clear gradients
+    policy_loss.backward() # backpropagate
+    optimizer.step() # update policy
+    del policy.rewards[:] # clear rewards
+    del policy.saved_log_probs[:] # clear log_probs
+
+def update_policy_fd(env, policy, episode, gamma=0.9):
     for dim1 in range(policy.linear1.weight.data.shape[0]):
         for dim2 in range(policy.linear1.weight.data.shape[1]):
-            policy_loss_gradient = fd_for_one_parameter(env, policy, dim1, dim2)
+            policy_loss_gradient = fd_for_one_parameter(env, policy, dim1, dim2, gamma=gamma**episode)
             policy.linear1.weight.data[dim1][dim2] += - 1e-2 * policy_loss_gradient
     #clear rewards
     del policy.rewards[:]
@@ -84,31 +94,42 @@ def sample_episode(env, policy):
             break
     return t, ep_reward
 
-def main():
-    env = gym.make('CartPole-v1')
-    env.seed(args.seed)
+def main(seed, number_of_episodes=200):
+    env = gym.make(args.env)
+    env.seed(seed)
+    torch.manual_seed(seed)
+    random.seed(seed)
     policy = Policy()
-    optimizer = optim.Adam(policy.parameters(), lr=1e-2)
+    optimizer = optim.Adam(policy.parameters(), lr=1e-2) #only used for reinforce
     running_reward = 10
-    for i_episode in count(1):
+    episode_rewards = []
+    for i_episode in range(number_of_episodes):
         state, ep_reward = env.reset(), 0
         #sample an episode
         last_episode_final_step, ep_reward = sample_episode(env, policy)
+        episode_rewards.append(ep_reward)
         # running reward across episodes
         running_reward = 0.05 * ep_reward + (1 - 0.05) * running_reward
         # update policy
-        update_policy(env, policy, optimizer)
+        if args.method == 'reinforce':
+            update_policy_reinforce(env, policy, optimizer)
+        elif args.method == 'fd':
+            update_policy_fd(env, policy, i_episode)
         if i_episode % args.log_interval == 0:
             print('Episode {}\tLast reward: {:.2f}\tAverage reward: {:.2f}'.format(
                   i_episode, ep_reward, running_reward))
-        if running_reward > env.spec.reward_threshold:
-            print("Solved! Running reward is now {} and "
-                  "the last episode runs to {} time steps!".format(running_reward, last_episode_final_step))
-            break
+    return episode_rewards
+    
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='PyTorch REINFORCE example')
+    parser.add_argument('--method', required=True,
+                        help='gradients calculation method (reinforce or fd)')
+    parser.add_argument('--env', default="CartPole-v0", 
+                        help='name of the environment to run')
+    parser.add_argument('--no_of_episodes', type=int, default=200, metavar='N',
+                        help='number of episodes to run expirements for')
     parser.add_argument('--gamma', type=float, default=0.99, metavar='G',
                         help='discount factor (default: 0.99)')
     parser.add_argument('--seed', type=int, default=543, metavar='N',
@@ -118,8 +139,12 @@ if __name__ == '__main__':
     parser.add_argument('--log-interval', type=int, default=10, metavar='N',
                         help='interval between training status logs (default: 10)')
     args = parser.parse_args()
-
-    torch.manual_seed(args.seed)
-    random.seed(args.seed)
-
-    main()
+    
+    rewards = []
+    #run main for 5 seeds
+    for seed in range(2):
+        rewards.append(main(seed, args.no_of_episodes))
+    #plot the rewards
+    plt.plot(torch.arange(1, args.no_of_episodes+1), torch.tensor(rewards).mean(dim=0))
+    plt.title('Average rewards')
+    plt.show()
