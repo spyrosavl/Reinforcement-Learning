@@ -134,17 +134,47 @@ if __name__ == '__main__':
                         help='discount factor (default: 0.99)')
     parser.add_argument('--seed', type=int, default=543, metavar='N',
                         help='random seed (default: 543)')
+    parser.add_argument('--no_seeds', type=int, default=10, metavar='N',
+                        help='number of seeds (default: 10)')
     parser.add_argument('--render', action='store_true',
                         help='render the environment')
     parser.add_argument('--log-interval', type=int, default=10, metavar='N',
                         help='interval between training status logs (default: 10)')
     args = parser.parse_args()
     
-    rewards = []
+
+    rewards = []; means = []; stds = []
     #run main for 5 seeds
-    for seed in range(2):
+    for seed in range(args.no_seeds):
         rewards.append(main(seed, args.no_of_episodes))
+    
+    rewards = np.asarray(rewards)
+
+    for i in range(rewards.shape[1]):
+        means.append(np.asarray(rewards[:,i]).mean())
+        stds.append(np.asarray(rewards[:,i]).std())
+
     #plot the rewards
     plt.plot(torch.arange(1, args.no_of_episodes+1), torch.tensor(rewards).mean(dim=0))
     plt.title('Average rewards')
     plt.show()
+
+    # import pdb; pdb.set_trace()
+
+    X = np.arange(rewards.shape[1])
+    y_upper = np.array([means[i] + np.sqrt(stds[i]) for i in range(len(means))])
+    y_lower = np.array([means[i] - np.sqrt(stds[i]) for i in range(len(means))])
+
+    plt.figure(figsize=(20,10))
+
+    plt.plot(X, means, '-r', label='Prediction mean', c='orange', alpha=0.8)
+
+    plt.fill_between(X, y_upper,y_lower, label='Prediction std', facecolor='orange', alpha=0.3)
+
+    plt.xlabel("Episode")
+    # plt.xticks(range(len(X)), X)
+    plt.ylabel("Average reward")
+    plt.legend(loc='upper left')
+    plt.show()
+
+    # import pdb; pdb.set_trace()
