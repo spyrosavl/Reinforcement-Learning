@@ -1,7 +1,7 @@
 #Algorithm from https://github.com/pytorch/examples/blob/master/reinforcement_learning/reinforce.py
 #REINFORCE is a gradient-based algorithm that uses Monte Carlo sampling to approximate the gradient of the policy.
 #REINFORCE explained: https://towardsdatascience.com/policy-gradient-methods-104c783251e0
-import argparse
+import argparse, pickle
 import gym
 import numpy as np
 from itertools import count, permutations
@@ -56,7 +56,7 @@ def calculate_policy_loss(policy):
     R = 0
     policy_loss_list = [] 
     future_returns = []
-    print(policy_loss_list)
+    # print(policy_loss_list)
     for r in policy.rewards[::-1]: # reverse buffer r
         R = r + args.gamma * R # G_t = r_t + gamma*G_{t+1}
         future_returns.insert(0, R) # insert at the beginning
@@ -176,38 +176,17 @@ if __name__ == '__main__':
     args = parser.parse_args()
     
 
-    rewards = []; means = []; stds = []
+    rewards = []
     #run main for 5 seeds
     for seed in range(args.no_seeds):
         rewards.append(main(seed, args.no_of_episodes))
-    
-    rewards = np.asarray(rewards)
 
-    for i in range(rewards.shape[1]):
-        means.append(np.asarray(rewards[:,i]).mean())
-        stds.append(np.asarray(rewards[:,i]).std())
+    rewards = np.asarray(rewards)
+    
+    with open('rewards_pickle.pkl', 'wb') as f:
+       pickle.dump(rewards, f)
 
     #plot the rewards
     plt.plot(torch.arange(1, args.no_of_episodes+1), torch.tensor(rewards).float().mean(dim=0))
     plt.title('Average rewards')
     plt.show()
-
-    # import pdb; pdb.set_trace()
-
-    X = np.arange(rewards.shape[1])
-    y_upper = np.array([means[i] + np.sqrt(stds[i]) for i in range(len(means))])
-    y_lower = np.array([means[i] - np.sqrt(stds[i]) for i in range(len(means))])
-
-    plt.figure(figsize=(20,10))
-
-    plt.plot(X, means, '-r', label='Reward mean', c='orange', alpha=0.8)
-
-    plt.fill_between(X, y_upper,y_lower, label='Reward std', facecolor='orange', alpha=0.3)
-
-    plt.xlabel("Episode")
-    # plt.xticks(range(len(X)), X)
-    plt.ylabel("Average reward")
-    plt.legend(loc='upper left')
-    plt.show()
-
-    # import pdb; pdb.set_trace()
