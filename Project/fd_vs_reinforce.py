@@ -56,7 +56,7 @@ def calculate_policy_loss(policy):
     R = 0
     policy_loss_list = [] 
     future_returns = []
-    print(policy.rewards)
+    print(policy_loss_list)
     for r in policy.rewards[::-1]: # reverse buffer r
         R = r + args.gamma * R # G_t = r_t + gamma*G_{t+1}
         future_returns.insert(0, R) # insert at the beginning
@@ -67,7 +67,7 @@ def calculate_policy_loss(policy):
             policy_loss_list.append(-log_prob * Gt) # policy loss is the negative log probability of the action times the discounted return
     else:
         for Gt in future_returns:
-            policy_loss_list.append(Gt)
+            policy_loss_list.append(-Gt)
     # print(policy_loss_list)
     return torch.cat(policy_loss_list).sum() # sum up gradients
 
@@ -124,9 +124,8 @@ def sample_episode(env, policy):
             break
     return t, ep_reward
 
-def main(seed, env=CartPolev0(), number_of_episodes=10000):
-    # env = gym.make(args.env)
-    env = env
+def main(seed, number_of_episodes=200):
+    env = args.env
     env.seed(seed)
     torch.manual_seed(seed)
     random.seed(seed)
@@ -152,10 +151,6 @@ def main(seed, env=CartPolev0(), number_of_episodes=10000):
         if i_episode % args.log_interval == 0:
             print('Episode {}\tLast reward: {:.2f}\tAverage reward: {:.2f}'.format(
                   i_episode, ep_reward, running_reward))
-        if running_reward > 195.0:
-            print("Solved! Running reward is now {} and "
-                  "the last episode runs to {} time steps!".format(running_reward, t))
-            break
     return episode_rewards
     
 
@@ -164,9 +159,9 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='PyTorch REINFORCE example')
     parser.add_argument('--method', type=str, default='reinforce',
                         help='gradients calculation method (reinforce or fd)')
-    parser.add_argument('--env', default="CartPole-v0", 
+    parser.add_argument('--env', type=object, default=CartPolev0(), 
                         help='name of the environment to run')
-    parser.add_argument('--no_of_episodes', type=int, default=200, metavar='N',
+    parser.add_argument('--no_of_episodes', type=int, default=4000, metavar='N',
                         help='number of episodes to run expirements for')
     parser.add_argument('--gamma', type=float, default=0.9, metavar='G',
                         help='discount factor (default: 0.9)')
@@ -193,7 +188,7 @@ if __name__ == '__main__':
         stds.append(np.asarray(rewards[:,i]).std())
 
     #plot the rewards
-    plt.plot(torch.arange(1, args.no_of_episodes+1), torch.tensor(rewards).mean(dim=0))
+    plt.plot(torch.arange(1, args.no_of_episodes+1), torch.tensor(rewards).float().mean(dim=0))
     plt.title('Average rewards')
     plt.show()
 
