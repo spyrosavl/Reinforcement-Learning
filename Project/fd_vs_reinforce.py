@@ -56,7 +56,10 @@ def calculate_policy_loss(policy):
     R = 0
     policy_loss_list = [] 
     future_returns = []
+<<<<<<< HEAD
     # print(policy_loss_list)
+=======
+>>>>>>> 8369ef3d1264c606b2d94bec67adc8890cb3726a
     for r in policy.rewards[::-1]: # reverse buffer r
         R = r + args.gamma * R # G_t = r_t + gamma*G_{t+1}
         future_returns.insert(0, R) # insert at the beginning
@@ -69,22 +72,23 @@ def calculate_policy_loss(policy):
         for Gt in future_returns:
             policy_loss_list.append(-Gt)
     # print(policy_loss_list)
-    return torch.cat(policy_loss_list).sum() # sum up gradients
+    return torch.cat(policy_loss_list).sum() if args.method == 'reinforce' else torch.tensor(policy_loss_list).sum()# sum up gradients
 
-def fd_for_one_parameter(env, policy, dim1, dim2, no_of_pertubations=2, epsilon=0.1, gamma=0.9):
-    epsilon = epsilon * gamma
-    #sample perturbations uniformly from [-epsilon, epsilon]
-    pertubations = Uniform(-epsilon, epsilon).sample((no_of_pertubations,))
-    policy_losses = []
-    with torch.no_grad():
-        for pertubation in pertubations:
-            perdubated_policy = Finite_Policy() # create a new policy
-            perdubated_policy.linear1.weight.data[dim1][dim2] = policy.linear1.weight.data[dim1][dim2] + pertubation
-            sample_episode(env, perdubated_policy)
-            policy_loss = calculate_policy_loss(perdubated_policy)
-            policy_losses.append(policy_loss)
-        policy_loss_gradient = torch.tensor(policy_losses).sum() / torch.tensor([abs(perdubation) for perdubation in pertubations]).sum()
-    return policy_loss_gradient
+# def fd(env, policy, no_of_parameters, no_of_pertubations=2, epsilon=0.1, gamma=0.9):
+#     epsilon = epsilon * gamma
+#     #sample perturbations uniformly from [-epsilon, epsilon]
+#     pertubations = Uniform(-epsilon, epsilon).sample((no_of_parameters,))
+#     policy_losses = []
+#     with torch.no_grad():
+#         for pertubation in pertubations:
+#             perdubated_policy = Finite_Policy() # create a new policy
+#             perdubated_policy.linear1.weight.data = policy.linear1.weight.data + pertubation
+#             sample_episode(env, perdubated_policy)
+#             policy_loss = calculate_policy_loss(perdubated_policy)
+#             policy_losses.append(policy_loss)
+#         policy_loss_gradient = torch.tensor(policy_losses).sum() / torch.tensor([abs(perdubation) for perdubation in pertubations]).sum()
+#         # print(policy_loss_gradient)
+#     return policy_loss_gradient
 
 def update_policy_reinforce(env, policy, optimizer):
     policy_loss = calculate_policy_loss(policy)
@@ -94,11 +98,23 @@ def update_policy_reinforce(env, policy, optimizer):
     del policy.rewards[:] # clear rewards
     del policy.saved_log_probs[:] # clear log_probs
 
-def update_policy_fd(env, policy, episode, gamma=0.9):
-    for dim1 in range(policy.linear1.weight.data.shape[0]):
-        for dim2 in range(policy.linear1.weight.data.shape[1]):
-            policy_loss_gradient = fd_for_one_parameter(env, policy, dim1, dim2, gamma=gamma**episode)
-            policy.linear1.weight.data[dim1][dim2] += - 1e-2 * policy_loss_gradient
+def update_policy_fd(env, policy, episode, epsilon=0.1, no_of_parameters=4, no_of_pertubations=2, gamma=0.9):
+    epsilon *= gamma
+    gamma = gamma**episode
+    pertubations = Uniform(-epsilon, epsilon).sample((no_of_parameters,))
+    policy_losses = []
+    with torch.no_grad():
+        for pertubation in pertubations:
+            policy_loss = calculate_policy_loss(policy)
+            perdubated_policy = policy # create a new policy
+            perdubated_policy.linear1.weight.data = policy.linear1.weight.data + pertubation
+            sample_episode(env, perdubated_policy)
+            pert_policy_loss = calculate_policy_loss(perdubated_policy)
+            policy_losses.append(pert_policy_loss-policy_loss)
+        policy_loss_gradient = torch.tensor(policy_losses).sum() / torch.tensor([abs(perdubation) for perdubation in pertubations]).sum()
+        # print(policy_loss_gradient)
+    policy.linear1.weight.data += - 1e-2 * policy_loss_gradient
+    
     #clear rewards
     del policy.rewards[:]
     del policy.saved_log_probs[:]
@@ -133,7 +149,7 @@ def main(seed, number_of_episodes=200):
         policy = Reinforce_Policy()
     elif args.method == 'fd':
         policy = Finite_Policy()
-    optimizer = optim.Adam(policy.parameters(), lr=1e-2) #only used for reinforce
+    optimizer = optim.SGD(policy.parameters(), lr=1e-2) #only used for reinforce
     running_reward = 10
     episode_rewards = []
     for i_episode in range(number_of_episodes):
@@ -157,11 +173,11 @@ def main(seed, number_of_episodes=200):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='PyTorch REINFORCE example')
-    parser.add_argument('--method', type=str, default='reinforce',
+    parser.add_argument('--method', type=str, default='fd',
                         help='gradients calculation method (reinforce or fd)')
     parser.add_argument('--env', type=object, default=CartPolev0(), 
                         help='name of the environment to run')
-    parser.add_argument('--no_of_episodes', type=int, default=4000, metavar='N',
+    parser.add_argument('--no_of_episodes', type=int, default=1000, metavar='N',
                         help='number of episodes to run expirements for')
     parser.add_argument('--gamma', type=float, default=0.9, metavar='G',
                         help='discount factor (default: 0.9)')
