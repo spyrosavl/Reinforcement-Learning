@@ -205,9 +205,9 @@ if __name__ == '__main__':
 
     plt.figure(figsize=(20,10))
 
-    plt.plot(X, means, '-r', label='Prediction mean', c='orange', alpha=0.8)
+    plt.plot(X, means, '-r', label='Reward mean', c='orange', alpha=0.8)
 
-    plt.fill_between(X, y_upper,y_lower, label='Prediction std', facecolor='orange', alpha=0.3)
+    plt.fill_between(X, y_upper,y_lower, label='Reward std', facecolor='orange', alpha=0.3)
 
     plt.xlabel("Episode")
     # plt.xticks(range(len(X)), X)
