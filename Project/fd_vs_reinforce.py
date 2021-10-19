@@ -12,27 +12,27 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-from torch.distributions import Categorical
+from torch.distributions import Normal, Categorical
 from torch.distributions.uniform import Uniform
 from environment import CartPolev0
 import matplotlib.pyplot as plt
 
 
-class Reinforce_Policy(nn.Module):
+# class Reinforce_Policy(nn.Module):
+#     def __init__(self):
+#         super(Reinforce_Policy, self).__init__()
+#         self.linear1 = nn.Linear(4, 2)
+
+#         self.saved_log_probs = []
+#         self.rewards = []
+
+#     def forward(self, x):
+#         action_scores = self.linear1(x)
+#         return F.softmax(action_scores, dim=1)
+
+class Policy(nn.Module):
     def __init__(self):
-        super(Reinforce_Policy, self).__init__()
-        self.linear1 = nn.Linear(4, 2)
-
-        self.saved_log_probs = []
-        self.rewards = []
-
-    def forward(self, x):
-        action_scores = self.linear1(x)
-        return F.softmax(action_scores, dim=1)
-
-class Finite_Policy(nn.Module):
-    def __init__(self):
-        super(Finite_Policy, self).__init__()
+        super(Policy, self).__init__()
         self.linear1 = nn.Linear(4, 1)
 
         self.saved_log_probs = []
@@ -44,12 +44,12 @@ class Finite_Policy(nn.Module):
         return force
 
 def select_action(policy, state):
-    state = torch.from_numpy(state).float().unsqueeze(0)
-    probs = policy(state)
-    actions_distribution = Categorical(probs)
-    action = actions_distribution.sample()
-    policy.saved_log_probs.append(actions_distribution.log_prob(action))
-    return action.item()
+    # state = torch.from_numpy(state).float().unsqueeze(0)
+    force_mean = policy(state)
+    actions_distribution = Normal(force_mean, 0.1)
+    force = actions_distribution.sample()
+    policy.saved_log_probs.append(actions_distribution.log_prob(force))
+    return force.item()
 
 def calculate_policy_loss(policy):
     eps = np.finfo(np.float32).eps.item()
@@ -118,16 +118,8 @@ def update_policy_fd(env, policy, episode, epsilon=0.1, no_of_parameters=4, no_o
 def sample_episode(env, policy):
     state, ep_reward = env.reset(), 0
     for t in range(1, 10000): # Don't infinite loop while learning
-        if args.method == 'reinforce':
-            action = select_action(policy, state)
-            force = None
-        else:
-            force = policy.forward(state)
-            if force < 0:
-                action = 1
-            else:
-                action = 0
-        state, reward, done, _ = env.step(action, force, args.method)
+        force = select_action(policy, state)
+        state, reward, done, _ = env.step(force)
         if args.render:
             env.render()
         policy.rewards.append(reward)
@@ -141,10 +133,7 @@ def main(seed, number_of_episodes=200):
     env.seed(seed)
     torch.manual_seed(seed)
     random.seed(seed)
-    if args.method == 'reinforce':
-        policy = Reinforce_Policy()
-    elif args.method == 'fd':
-        policy = Finite_Policy()
+    policy = Policy()
     optimizer = optim.SGD(policy.parameters(), lr=1e-2) #only used for reinforce
     running_reward = 10
     episode_rewards = []
@@ -169,11 +158,11 @@ def main(seed, number_of_episodes=200):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='PyTorch REINFORCE example')
-    parser.add_argument('--method', type=str, default='fd',
+    parser.add_argument('--method', type=str, default='reinforce',
                         help='gradients calculation method (reinforce or fd)')
     parser.add_argument('--env', type=object, default=CartPolev0(), 
                         help='name of the environment to run')
-    parser.add_argument('--no_of_episodes', type=int, default=1000, metavar='N',
+    parser.add_argument('--no_of_episodes', type=int, default=4000, metavar='N',
                         help='number of episodes to run expirements for')
     parser.add_argument('--gamma', type=float, default=0.9, metavar='G',
                         help='discount factor (default: 0.9)')

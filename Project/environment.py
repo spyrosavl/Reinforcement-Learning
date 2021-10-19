@@ -52,17 +52,10 @@ class CartPolev0(gym.Env):
         self.np_random, seed = seeding.np_random(seed)
         return [seed]
 
-    def step(self, action, force, method):
-        err_msg = "%r (%s) invalid" % (action, type(action))
-        assert self.action_space.contains(action), err_msg
+    def step(self, force):
 
         x, x_dot, theta, theta_dot = self.state
-        if method == 'reinforce':
-            self.force = self.force_mag if action == 1 else -self.force_mag
-        elif method == 'fd':
-            self.force = force
-        else:
-            raise ValueError('Please choose a different method')
+        self.force = force
         costheta = math.cos(theta)
         sintheta = math.sin(theta)
 
