@@ -3,11 +3,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from collections import deque
 
-
-with open('rewards_pickle_reinforce_cartpole.pkl', 'rb') as f:
+with open('rewards_pickle.pkl', 'rb') as f:
    rewards = pickle.load(f)
-
-# import pdb; pdb.set_trace()
 
 no_of_episodes = 4000
 means = []; stds = []
@@ -19,8 +16,6 @@ for i in range(rewards.shape[1]):
 plt.plot(torch.arange(1, no_of_episodes+1), torch.tensor(rewards).float().mean(dim=0))
 plt.title('Average rewards')
 plt.show()
-
-# import pdb; pdb.set_trace()
 
 X = np.arange(rewards.shape[1])
 y_upper = np.array([means[i] + np.sqrt(stds[i]) for i in range(len(means))])
