@@ -56,7 +56,7 @@ def calculate_policy_loss(policy):
     R = 0
     policy_loss_list = [] 
     future_returns = []
-    print(policy.rewards)
+    # print(policy.rewards)
     for r in policy.rewards[::-1]: # reverse buffer r
         R = r + args.gamma * R # G_t = r_t + gamma*G_{t+1}
         future_returns.insert(0, R) # insert at the beginning
@@ -124,9 +124,8 @@ def sample_episode(env, policy):
             break
     return t, ep_reward
 
-def main(seed, env=CartPolev0(), number_of_episodes=10000):
-    # env = gym.make(args.env)
-    env = env
+def main(seed, number_of_episodes=10000):
+    env = args.env
     env.seed(seed)
     torch.manual_seed(seed)
     random.seed(seed)
@@ -152,10 +151,6 @@ def main(seed, env=CartPolev0(), number_of_episodes=10000):
         if i_episode % args.log_interval == 0:
             print('Episode {}\tLast reward: {:.2f}\tAverage reward: {:.2f}'.format(
                   i_episode, ep_reward, running_reward))
-        if running_reward > 195.0:
-            print("Solved! Running reward is now {} and "
-                  "the last episode runs to {} time steps!".format(running_reward, t))
-            break
     return episode_rewards
     
 
@@ -164,7 +159,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='PyTorch REINFORCE example')
     parser.add_argument('--method', type=str, default='reinforce',
                         help='gradients calculation method (reinforce or fd)')
-    parser.add_argument('--env', default="CartPole-v0", 
+    parser.add_argument('--env', type=object, default=CartPolev0(), 
                         help='name of the environment to run')
     parser.add_argument('--no_of_episodes', type=int, default=200, metavar='N',
                         help='number of episodes to run expirements for')
@@ -193,7 +188,7 @@ if __name__ == '__main__':
         stds.append(np.asarray(rewards[:,i]).std())
 
     #plot the rewards
-    plt.plot(torch.arange(1, args.no_of_episodes+1), torch.tensor(rewards).mean(dim=0))
+    plt.plot(torch.arange(1, args.no_of_episodes+1), torch.tensor(rewards).float().mean(dim=0))
     plt.title('Average rewards')
     plt.show()
 
