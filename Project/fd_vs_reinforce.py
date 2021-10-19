@@ -18,28 +18,16 @@ from environment import CartPolev0
 import matplotlib.pyplot as plt
 
 
-# class Reinforce_Policy(nn.Module):
-#     def __init__(self):
-#         super(Reinforce_Policy, self).__init__()
-#         self.linear1 = nn.Linear(4, 2)
-
-#         self.saved_log_probs = []
-#         self.rewards = []
-
-#     def forward(self, x):
-#         action_scores = self.linear1(x)
-#         return F.softmax(action_scores, dim=1)
-
 class Policy(nn.Module):
     def __init__(self):
         super(Policy, self).__init__()
-        self.linear1 = nn.Linear(4, 1)
+        self.linear1 = nn.Linear(args.input, args.output)
 
         self.saved_log_probs = []
         self.rewards = []
 
     def forward(self, x):
-        x = torch.from_numpy(x).float().unsqueeze(0)
+        x = torch.from_numpy(x.copy()).float().unsqueeze(0)
         force = self.linear1(x)
         return force
 
@@ -56,10 +44,6 @@ def calculate_policy_loss(policy):
     R = 0
     policy_loss_list = [] 
     future_returns = []
-<<<<<<< HEAD
-    # print(policy_loss_list)
-=======
->>>>>>> 8369ef3d1264c606b2d94bec67adc8890cb3726a
     for r in policy.rewards[::-1]: # reverse buffer r
         R = r + args.gamma * R # G_t = r_t + gamma*G_{t+1}
         future_returns.insert(0, R) # insert at the beginning
@@ -99,8 +83,8 @@ def update_policy_reinforce(env, policy, optimizer):
     del policy.saved_log_probs[:] # clear log_probs
 
 def update_policy_fd(env, policy, episode, epsilon=0.1, no_of_parameters=4, no_of_pertubations=2, gamma=0.9):
-    epsilon *= gamma
     gamma = gamma**episode
+    epsilon *= gamma
     pertubations = Uniform(-epsilon, epsilon).sample((no_of_parameters,))
     policy_losses = []
     with torch.no_grad():
@@ -112,7 +96,6 @@ def update_policy_fd(env, policy, episode, epsilon=0.1, no_of_parameters=4, no_o
             pert_policy_loss = calculate_policy_loss(perdubated_policy)
             policy_losses.append(pert_policy_loss-policy_loss)
         policy_loss_gradient = torch.tensor(policy_losses).sum() / torch.tensor([abs(perdubation) for perdubation in pertubations]).sum()
-        # print(policy_loss_gradient)
     policy.linear1.weight.data += - 1e-2 * policy_loss_gradient
     
     #clear rewards
@@ -134,6 +117,7 @@ def sample_episode(env, policy):
 
 def main(seed, number_of_episodes=200):
     env = args.env
+    # env = gym.make(args.env)
     env.seed(seed)
     torch.manual_seed(seed)
     random.seed(seed)
@@ -164,7 +148,11 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='PyTorch REINFORCE example')
     parser.add_argument('--method', type=str, default='reinforce',
                         help='gradients calculation method (reinforce or fd)')
-    parser.add_argument('--env', type=object, default=CartPolev0(), 
+    parser.add_argument('--input', type=int, default=4,
+                        help='Input dim of the network')
+    parser.add_argument('--output', type=int, default=1,
+                        help='output dim of the network')
+    parser.add_argument('--env', default=CartPolev0(), 
                         help='name of the environment to run')
     parser.add_argument('--no_of_episodes', type=int, default=4000, metavar='N',
                         help='number of episodes to run expirements for')

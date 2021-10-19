@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from collections import deque
 
 
-with open('rewards_pickle.pkl', 'rb') as f:
+with open('rewards_pickle_reinforce_cartpole.pkl', 'rb') as f:
    rewards = pickle.load(f)
 
 # import pdb; pdb.set_trace()
