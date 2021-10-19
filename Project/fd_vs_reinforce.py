@@ -56,7 +56,7 @@ def calculate_policy_loss(policy):
     R = 0
     policy_loss_list = [] 
     future_returns = []
-    # print(policy.rewards)
+    print(policy_loss_list)
     for r in policy.rewards[::-1]: # reverse buffer r
         R = r + args.gamma * R # G_t = r_t + gamma*G_{t+1}
         future_returns.insert(0, R) # insert at the beginning
@@ -67,7 +67,7 @@ def calculate_policy_loss(policy):
             policy_loss_list.append(-log_prob * Gt) # policy loss is the negative log probability of the action times the discounted return
     else:
         for Gt in future_returns:
-            policy_loss_list.append(Gt)
+            policy_loss_list.append(-Gt)
     # print(policy_loss_list)
     return torch.cat(policy_loss_list).sum() # sum up gradients
 
@@ -124,7 +124,7 @@ def sample_episode(env, policy):
             break
     return t, ep_reward
 
-def main(seed, number_of_episodes=10000):
+def main(seed, number_of_episodes=200):
     env = args.env
     env.seed(seed)
     torch.manual_seed(seed)
@@ -161,7 +161,7 @@ if __name__ == '__main__':
                         help='gradients calculation method (reinforce or fd)')
     parser.add_argument('--env', type=object, default=CartPolev0(), 
                         help='name of the environment to run')
-    parser.add_argument('--no_of_episodes', type=int, default=200, metavar='N',
+    parser.add_argument('--no_of_episodes', type=int, default=4000, metavar='N',
                         help='number of episodes to run expirements for')
     parser.add_argument('--gamma', type=float, default=0.9, metavar='G',
                         help='discount factor (default: 0.9)')
