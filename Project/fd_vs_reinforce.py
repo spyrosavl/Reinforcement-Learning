@@ -26,13 +26,13 @@ class Policy(nn.Module):
         self.rewards = []
 
     def forward(self, x):
-        x = torch.from_numpy(x.copy()).float().unsqueeze(0)
+        x = torch.from_numpy(x).float().unsqueeze(0)
         force = self.linear1(x)
         return force
 
 def select_action(policy, state):
     force_mean = policy(state)
-    actions_distribution = Normal(force_mean, 0.1)
+    actions_distribution = Normal(force_mean, 0.01)
     force = actions_distribution.sample()
     policy.saved_log_probs.append(actions_distribution.log_prob(force))
     return force.item()
@@ -65,8 +65,8 @@ def update_policy_reinforce(env, policy, optimizer):
     del policy.saved_log_probs[:] # clear log_probs
 
 def update_policy_fd(env, policy, episode, lr, epsilon=0.1, no_of_parameters=4, no_of_pertubations=2, gamma=0.9):
-    gamma = gamma**episode
     epsilon *= gamma
+    # gamma = gamma**episode
     #sample perturbations uniformly from [-epsilon, epsilon]
     pertubations = Uniform(-epsilon, epsilon).sample((no_of_parameters,))
     policy_losses = []
