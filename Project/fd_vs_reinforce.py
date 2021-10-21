@@ -153,10 +153,10 @@ def deltas(epsilon, gamma, episode):
 
     delta: torch.tensor (pertubation)
     """
-    gamma = gamma**episode #TODO check if this is correct
-    epsilon *= gamma
     delta = Uniform(-epsilon, epsilon).sample()
-    return delta
+    gamma = gamma**episode #TODO check if this is correct
+    delta = delta * gamma
+    return max(delta, torch.finfo(torch.float32).eps)
 
 
 def update_policy_reinforce(env, policy, optimizer):
@@ -175,10 +175,10 @@ def update_policy_fd(env, policy, episode, lr, epsilon=0.1, no_of_pertubations=2
     """
     Updates policy when using the fd method based on :https://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.78.6163&rep=rep1&type=pdf
     """
+    policy_loss = calculate_policy_loss(policy)
     policy_loss_gradient = torch.zeros_like(policy.linear1.weight.data)
     for dim1 in range(policy.linear1.weight.data.shape[0]):
         for dim2 in range(policy.linear1.weight.data.shape[1]):
-            policy_loss = calculate_policy_loss(policy)
             policy_losses = []
             pertubations = []
             for k in range(no_of_pertubations):
@@ -252,7 +252,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='PyTorch REINFORCE example')
     parser.add_argument('--method', type=str, required=True,
                         help='gradients calculation method (reinforce or fd)')
-    parser.add_argument('--lr', type=int, default=1e-2,
+    parser.add_argument('--lr', type=float, default=1e-2,
                         help='Learning rate')
     parser.add_argument('--env', default='CartPole-v0', required=True, 
                         help='name of the environment to run')
@@ -260,7 +260,7 @@ if __name__ == '__main__':
                         help='standard deviation used in create_force')
     parser.add_argument('--no_of_episodes', type=int, default=4000, metavar='N',
                         help='number of episodes to run expirements for')
-    parser.add_argument('--no_of_pertubations', type=int, default=10,
+    parser.add_argument('--no_of_pertubations', type=int, default=4,
                         help='number of pertubations')
     parser.add_argument('--gamma', type=float, default=0.9, metavar='G',
                         help='discount factor (default: 0.9)')
