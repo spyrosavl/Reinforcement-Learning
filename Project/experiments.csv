@@ -1,0 +1,12 @@
+Environment,Method,Pertubations,Modification,Rewards file
+CartPole-custom,REINFORCE,,,
+CartPole-custom,FD,10,,
+CartPole-custom,FD,10,remove discount in pertubations,
+CartPole-v0,REINFORCE,,,
+CartPole-v0,FD,10,remove discount in pertubations,
+CartPole-v0,FD,10,use same loss as REINFORCE,
+LunarLander-v2,REINFORCE,,,
+LunarLander-v2,FD,10,remove discount in pertubations,
+LunarLander-v2,FD,10,use same loss as REINFORCE,
+,,,,
+,,,,

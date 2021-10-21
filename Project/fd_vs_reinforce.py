@@ -153,9 +153,9 @@ def deltas(epsilon, gamma, episode):
 
     delta: torch.tensor (pertubation)
     """
-    delta = Uniform(-epsilon, epsilon).sample()
-    gamma = gamma**episode
+    gamma = gamma**episode #TODO check if this is correct
     epsilon *= gamma
+    delta = Uniform(-epsilon, epsilon).sample()
     return delta
 
 
@@ -254,19 +254,19 @@ if __name__ == '__main__':
                         help='gradients calculation method (reinforce or fd)')
     parser.add_argument('--lr', type=int, default=1e-2,
                         help='Learning rate')
-    parser.add_argument('--env', default='CartPole-v0', 
+    parser.add_argument('--env', default='CartPole-v0', required=True, 
                         help='name of the environment to run')
     parser.add_argument('--std', type=float, default=0.01, 
                         help='standard deviation used in create_force')
     parser.add_argument('--no_of_episodes', type=int, default=4000, metavar='N',
                         help='number of episodes to run expirements for')
-    parser.add_argument('--no_of_pertubations', type=int, default=2,
+    parser.add_argument('--no_of_pertubations', type=int, default=10,
                         help='number of pertubations')
     parser.add_argument('--gamma', type=float, default=0.9, metavar='G',
                         help='discount factor (default: 0.9)')
     parser.add_argument('--epsilon', type=float, default=0.1, metavar='G',
                         help='factor used for uniformly distributed pertubations (default: 0.1)')
-    parser.add_argument('--no_seeds', type=int, default=10, metavar='N',
+    parser.add_argument('--no_seeds', type=int, default=3, metavar='N',
                         help='number of seeds (default: 10)')
     parser.add_argument('--render', action='store_true',
                         help='render the environment')
@@ -274,8 +274,12 @@ if __name__ == '__main__':
                         help='interval between training status logs (default: 10)')
     args = parser.parse_args()
     
+    #Print the arguments
+    print(args)
+
+    #Run the experiment
     rewards = []
-    #run main for 5 seeds
+    #run main for multiple seeds
     for seed in range(args.no_seeds):
         rewards.append(main(seed, args.no_of_episodes))
 
@@ -283,3 +287,6 @@ if __name__ == '__main__':
     
     with open('rewards_pickle_{}_{}.pkl'.format(args.method, args.env), 'wb') as f:
        pickle.dump(rewards, f)
+    
+    with open('params_{}_{}.txt'.format(args.method, args.env), 'wb') as f:
+       pickle.dump(args, f)
