@@ -192,7 +192,7 @@ def update_policy_fd(env, policy, episode, lr, epsilon=0.1, no_of_pertubations=2
                 pertubations.append(pertubation)
                 pertubated_policy.linear1.weight.data[dim1][dim2] = policy.linear1.weight.data[dim1][dim2] + pertubation
                 pert_policy_loss = calculate_policy_loss(pertubated_policy)
-                policy_losses.append(pert_policy_loss)
+                policy_losses.append(pert_policy_loss-policy_loss)
             policy_loss_gradient[dim1][dim2] = torch.dot(torch.tensor(policy_losses), torch.tensor(pertubations)).sum() / torch.sum(torch.tensor(pertubations)**2)
     policy.linear1.weight.data += - lr * policy_loss_gradient # gradient descent
 
