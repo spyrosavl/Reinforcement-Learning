@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from collections import deque
 
-with open('rewards_pickle.pkl', 'rb') as f:
+with open('rewards_pickle_finite_cartpole.pkl', 'rb') as f:
    rewards = pickle.load(f)
 
 no_of_episodes = 4000
