@@ -4,7 +4,7 @@ In this experiment we are comparing two gradient policy methods, namely, REINFOR
 
 Below the reader can find the instructions of excecution. 
 
-This code is also accessible on [title](https://github.com/spyrosavl/Reinforcement-Learning/tree/master/Project)
+This code is also accessible on [Github](https://github.com/spyrosavl/Reinforcement-Learning/tree/master/Project)
 
 1. Make sure you are working in an environment containing the right packages:
 
