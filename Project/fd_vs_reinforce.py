@@ -18,6 +18,20 @@ from environment import CartPolev0
 import matplotlib.pyplot as plt
 
 class Policy(nn.Module):
+    """
+    Policy theta. 
+    -------------------
+    Args:
+    
+    x : torch.tensor representing the state(s). 
+
+    Returns:
+
+    force_mean for the custom env 
+    action_probs for any other env
+
+    -------------------
+    """
     def __init__(self):
         super(Policy, self).__init__()
 
@@ -43,14 +57,46 @@ class Policy(nn.Module):
         return output if args.env == 'CartPole-v0-custom' else F.softmax(output, dim=1)
 
 def select_force(policy, state):
+    """
+    This function returns the force used in the cartpole env.\
+    The force is sampled by a normal distribution N(force_mean, args.std),\
+    where the force_mean is encoded by the policy network.
+    -------------------
+    Args:
+
+    policy: class object 
+    state : ndarray provided by the env.step
+
+    Returns:
+
+    force : scalar
+
+    ------------------
+    """
     state = torch.from_numpy(state).float().unsqueeze(0)
     force_mean = policy(state)
-    actions_distribution = Normal(force_mean, 0.01)
+    actions_distribution = Normal(force_mean, args.std)
     force = actions_distribution.sample()
     policy.saved_log_probs.append(actions_distribution.log_prob(force))
     return force.item()
 
 def select_action(policy, state):
+    """
+    This function returns the action used in the cartpole env.\
+    The action is sampled by a categorical distribution,\
+    where the probs are encoded by the policy network.
+    -------------------
+    Args:
+
+    policy: class object 
+    state : ndarray provided by the env.step
+
+    Returns:
+
+    action : int
+
+    ------------------
+    """
     state = torch.from_numpy(state).float().unsqueeze(0)
     probs = policy(state)
     actions_distribution = Categorical(probs)
@@ -59,6 +105,21 @@ def select_action(policy, state):
     return action.item()
 
 def calculate_policy_loss(policy):
+    """
+    Calculates policy loss. \
+    If our method is REINFORCE then this is computed as the negative product of the log probs times the returns.\
+    If our method is Fd then it is simply computed as the total rewards. 
+    -----------------
+    Args:
+
+    policy : class object
+
+    Returns:
+
+    loss: torch.tensor
+
+    -------------------
+    """
     eps = np.finfo(np.float32).eps.item()
     R = 0
     policy_loss_list = [] 
@@ -71,13 +132,37 @@ def calculate_policy_loss(policy):
     if args.method == 'reinforce':
         for log_prob, Gt in zip(policy.saved_log_probs, future_returns): # Use trajectory to estimate the policy loss
             policy_loss_list.append(-log_prob * Gt) # policy loss is the negative log probability of the action times the discounted return
-    else:
+    elif args.method == 'fd':
         for Gt in future_returns:
             policy_loss_list.append(-Gt)
+    else:
+        raise ValueError('This method is not valid. Please try a different one.')
     return torch.cat(policy_loss_list).sum() if args.method == 'reinforce' else torch.tensor(policy_loss_list).sum()# sum up gradients
+
+def deltas(epsilon, gamma, episode):
+    """
+    This function returns the perdubations delta sampled from a uniform distribution [-epsilon, epsilon]
+    ----------------
+    Args:
+
+    env: environment
+    gamma: scalar
+    episode: scalar (number of current episode)
+
+    Returns:
+
+    delta: torch.tensor (pertubation)
+    """
+    delta = Uniform(-epsilon, epsilon).sample()
+    gamma = gamma**episode
+    epsilon *= gamma
+    return delta
 
 
 def update_policy_reinforce(env, policy, optimizer):
+    """
+    Updates policy when using the REINFORCE method.
+    """
     policy_loss = calculate_policy_loss(policy)
     optimizer.zero_grad() # clear gradients
     policy_loss.backward() # backpropagate
@@ -85,13 +170,11 @@ def update_policy_reinforce(env, policy, optimizer):
     del policy.rewards[:] # clear rewards
     del policy.saved_log_probs[:] # clear log_probs
 
-def deltas(epsilon, gamma, episode):
-    deltas = Uniform(-epsilon, epsilon).sample()
-    gamma = gamma**episode
-    epsilon *= gamma
-    return deltas
 
 def update_policy_fd(env, policy, episode, lr, epsilon=0.1, no_of_pertubations=2, gamma=0.9):
+    """
+    Updates policy when using the fd method based on :https://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.78.6163&rep=rep1&type=pdf
+    """
     policy_loss_gradient = torch.zeros_like(policy.linear1.weight.data)
     for dim1 in range(policy.linear1.weight.data.shape[0]):
         for dim2 in range(policy.linear1.weight.data.shape[1]):
@@ -118,6 +201,9 @@ def update_policy_fd(env, policy, episode, lr, epsilon=0.1, no_of_pertubations=2
     del policy.saved_log_probs[:]
 
 def sample_episode(env, policy, render=False):
+    """
+    Samples episode
+    """
     state, ep_reward = env.reset(), 0
     for t in range(1, 10000): # Don't infinite loop while learning
         if args.env == 'CartPole-v0-custom':
@@ -140,7 +226,7 @@ def main(seed, number_of_episodes=200):
     torch.manual_seed(seed)
     random.seed(seed)
     policy = Policy()
-    optimizer = optim.Adam(policy.parameters(), lr=args.lr) #only used for reinforce
+    optimizer = optim.SGD(policy.parameters(), lr=args.lr) #only used for reinforce
     running_reward = 10
     episode_rewards = []
     for i_episode in range(number_of_episodes):
@@ -170,6 +256,8 @@ if __name__ == '__main__':
                         help='Learning rate')
     parser.add_argument('--env', default='CartPole-v0', 
                         help='name of the environment to run')
+    parser.add_argument('--std', type=float, default=0.01, 
+                        help='standard deviation used in create_force')
     parser.add_argument('--no_of_episodes', type=int, default=4000, metavar='N',
                         help='number of episodes to run expirements for')
     parser.add_argument('--no_of_pertubations', type=int, default=2,
@@ -193,5 +281,5 @@ if __name__ == '__main__':
 
     rewards = np.asarray(rewards)
     
-    with open('rewards_pickle.pkl', 'wb') as f:
+    with open('rewards_pickle_{}_{}.pkl'.format(args.method, args.env), 'wb') as f:
        pickle.dump(rewards, f)

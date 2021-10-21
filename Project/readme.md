@@ -18,7 +18,7 @@ This code is also accessible on [Github](https://github.com/spyrosavl/Reinforcem
 
 In our code we will refer to REINFORCE as reinforce and Finite differences as fd. Moreover, we experiment in the following environments:
 
-- CartPole-v0-custom (for more details refer to our report here **add link**, or, check *environment.py*)
+- CartPole-v0-custom (for more details refer to our report [here](https://www.overleaf.com/read/tppwsbmjbynt), or, check *environment.py*)
 - CartPole-v0
 - LunarLander-v2
 
