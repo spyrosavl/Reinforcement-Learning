@@ -3,18 +3,27 @@
 Usefull commands for reproducibility.
 
 - CartPole-v0-custom:
+  
 `$ python3 fd_vs_reinforce.py --method reinforce --env CartPole-v0-custom --no_of_episodes 4000`
+
 `$ python3 fd_vs_reinforce.py --method fd --env CartPole-v0-custom --no_of_episodes 6000`
+
 `$ python3 fd_vs_reinforce.py --method fd_with_reinforce --env CartPole-v0-custom --no_of_episodes 6000`
 
 - CartPole-v0:
+  
 `$ python3 fd_vs_reinforce.py --method reinforce --env CartPole-v0 --no_of_episodes 4000`
+
 `$ python3 fd_vs_reinforce.py --method fd --env CartPole-v0 --no_of_episodes 4000`
+
 `$ python3 fd_vs_reinforce.py --method fd_with_reinforce --env CartPole-v0 --no_of_episodes 4000`
 
 - LunarLander-v2:
+  
 `$ python3 fd_vs_reinforce.py --method reinforce --env LunarLander-v2 --no_of_episodes 4000`
+
 `$ python3 fd_vs_reinforce.py --method fd --env LunarLander-v2 --no_of_episodes 4000`
+
 `$ python3 fd_vs_reinforce.py --method fd_with_reinforce --env LunarLander-v2 --no_of_episodes 4000`
 
 In this experiment we are comparing two gradient policy methods, namely, REINFORCE and Finite differences. This comparison is made across 3 different environments. 
