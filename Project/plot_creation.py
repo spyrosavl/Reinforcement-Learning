@@ -3,10 +3,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 from collections import deque
 
-with open('rewards_pickle_finite_cartpole.pkl', 'rb') as f:
+with open('rewards_pickle_finite_cartpole.pkl', 'rb') as f: #Make sure you load the correct pickle file.
    rewards = pickle.load(f)
 
-no_of_episodes = 4000
+no_of_episodes = 4000 #Specify number of episodes the method run for (fd for the custom env is 6k steps)
 means = []; stds = []
 for i in range(rewards.shape[1]):
     means.append(np.asarray(rewards[:,i]).mean())

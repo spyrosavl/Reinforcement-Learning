@@ -129,12 +129,12 @@ def calculate_policy_loss(policy):
         future_returns.insert(0, R) # insert at the beginning
     future_returns = torch.tensor(future_returns)
     future_returns = (future_returns - future_returns.float().mean()) / (future_returns.float().std() + eps) # normalize returns
-    if args.method == 'reinforce':
+    if args.method == 'reinforce' or args.method == 'fd_with_reinforce':
         for log_prob, Gt in zip(policy.saved_log_probs, future_returns): # Use trajectory to estimate the policy loss
             policy_loss_list.append(-log_prob * Gt) # policy loss is the negative log probability of the action times the discounted return
     elif args.method == 'fd':
         for Gt in future_returns:
-            policy_loss_list.append(-Gt)
+            policy_loss_list.append(Gt)
     else:
         raise ValueError('This method is not valid. Please try a different one.')
     return torch.cat(policy_loss_list).sum() if args.method == 'reinforce' else torch.tensor(policy_loss_list).sum()# sum up gradients
@@ -154,7 +154,7 @@ def deltas(epsilon, gamma, episode):
     delta: torch.tensor (pertubation)
     """
     delta = Uniform(-epsilon, epsilon).sample()
-    gamma = gamma**episode #TODO check if this is correct
+    gamma = gamma**episode
     delta = delta * gamma
     return max(delta, torch.finfo(torch.float32).eps)
 
@@ -193,7 +193,7 @@ def update_policy_fd(env, policy, episode, lr, epsilon=0.1, no_of_pertubations=2
                 pertubated_policy.linear1.weight.data[dim1][dim2] = policy.linear1.weight.data[dim1][dim2] + pertubation
                 pert_policy_loss = calculate_policy_loss(pertubated_policy)
                 policy_losses.append(pert_policy_loss-policy_loss)
-            policy_loss_gradient[dim1][dim2] = torch.dot(torch.tensor(policy_losses), torch.tensor(pertubations)).sum() / torch.sum(torch.tensor(pertubations)**2)
+            policy_loss_gradient[dim1][dim2] = torch.dot(torch.tensor(policy_losses).float(), torch.tensor(pertubations).float()).sum() / torch.sum(torch.tensor(pertubations)**2)
     policy.linear1.weight.data += - lr * policy_loss_gradient # gradient descent
 
     #clear rewards
@@ -239,7 +239,7 @@ def main(seed, number_of_episodes=200):
         # update policy
         if args.method == 'reinforce':
             update_policy_reinforce(env, policy, optimizer)
-        elif args.method == 'fd':
+        elif args.method == 'fd' or args.method == 'fd_with_reinforce':
             update_policy_fd(env, policy, i_episode, args.lr)
         if i_episode % args.log_interval == 0:
             print('Episode {}\tLast reward: {:.2f}\tAverage reward: {:.2f}'.format(
@@ -251,14 +251,14 @@ def main(seed, number_of_episodes=200):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='PyTorch REINFORCE example')
     parser.add_argument('--method', type=str, required=True,
-                        help='gradients calculation method (reinforce or fd)')
+                        help='gradients calculation method (reinforce or fd or fd_with_reinforce)')
     parser.add_argument('--lr', type=float, default=1e-2,
                         help='Learning rate')
     parser.add_argument('--env', default='CartPole-v0', required=True, 
                         help='name of the environment to run')
     parser.add_argument('--std', type=float, default=0.01, 
                         help='standard deviation used in create_force')
-    parser.add_argument('--no_of_episodes', type=int, default=4000, metavar='N',
+    parser.add_argument('--no_of_episodes', type=int, default=4000, required=True, metavar='N',
                         help='number of episodes to run expirements for')
     parser.add_argument('--no_of_pertubations', type=int, default=4,
                         help='number of pertubations')
