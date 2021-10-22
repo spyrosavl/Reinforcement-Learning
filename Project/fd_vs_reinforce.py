@@ -251,7 +251,7 @@ def main(seed, number_of_episodes=200):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='PyTorch REINFORCE example')
     parser.add_argument('--method', type=str, required=True,
-                        help='gradients calculation method (reinforce or fd or fd_with_reinforce)')
+                        help='gradients calculation method (reinforce, fd or fd_with_reinforce)')
     parser.add_argument('--lr', type=float, default=1e-2,
                         help='Learning rate')
     parser.add_argument('--env', default='CartPole-v0', required=True, 
