@@ -156,7 +156,7 @@ def deltas(epsilon, gamma, episode):
     delta = Uniform(-epsilon, epsilon).sample()
     gamma = gamma**episode #TODO check if this is correct
     delta = delta * gamma
-    return max(delta, torch.finfo(torch.float32).eps)
+    return torch.max(torch.tensor([delta, torch.finfo(torch.double).eps])).double()
 
 
 def update_policy_reinforce(env, policy, optimizer):
@@ -287,6 +287,3 @@ if __name__ == '__main__':
     
     with open('rewards_pickle_{}_{}.pkl'.format(args.method, args.env), 'wb') as f:
        pickle.dump(rewards, f)
-    
-    with open('params_{}_{}.txt'.format(args.method, args.env), 'wb') as f:
-       pickle.dump(args, f)

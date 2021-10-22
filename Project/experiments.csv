@@ -1,13 +1,13 @@
-Who,Environment,Method,Pertubations,Modification,Episodes,Rewards file
-Danai,CartPole-custom,REINFORCE,,,4K,
-Alex,CartPole-custom,FD,4,,6K,
-Spyros,CartPole-custom,FD,4,use same loss as REINFORCE,6K,
-Danai,CartPole-v0,REINFORCE,,,4K,
-Alex,CartPole-v0,FD,4,,4K,
-Spyros,CartPole-v0,FD,4,use same loss as REINFORCE,4K,
-Danai,LunarLander-v2,REINFORCE,,,4K,
-Alex,LunarLander-v2,FD,4,,4K,
-Spyros,LunarLander-v2,FD,4,use same loss as REINFORCE,4K,
-,,,,,,
-,,,,,,
-,,,,,,
+Who,Environment,Method,Pertubations,Modification,Episodes
+Danai,CartPole-custom,REINFORCE,,,4K
+Alex,CartPole-custom,FD,4,,6K
+Spyros,CartPole-custom,FD,4,use same loss as REINFORCE,6K
+Danai,CartPole-v0,REINFORCE,,,4K
+Alex,CartPole-v0,FD,4,,4K
+Spyros,CartPole-v0,FD,4,use same loss as REINFORCE,4K
+Danai,LunarLander-v2,REINFORCE,,,4K
+Alex,LunarLander-v2,FD,4,,4K
+Spyros,LunarLander-v2,FD,4,use same loss as REINFORCE,4K
+,,,,,
+,,,,,
+,,,,,
